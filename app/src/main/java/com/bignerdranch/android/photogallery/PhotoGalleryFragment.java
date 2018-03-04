@@ -1,21 +1,13 @@
 package com.bignerdranch.android.photogallery;
 
-import android.app.DownloadManager;
-import android.app.job.JobInfo;
-import android.app.job.JobScheduler;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.ContentLoadingProgressBar;
 import android.support.v7.widget.GridLayoutManager;
@@ -37,11 +29,9 @@ import java.util.List;
  * Created by Jack on 2/13/2018.
  */
 
-public class PhotoGalleryFragment extends Fragment{
+public class PhotoGalleryFragment extends VisibleFragment {
 
     private static final String TAG = "PhotoGalleryFragment";
-
-    private static final int JOB_ID = 1;
 
     private RecyclerView mPhotoRecyclerView;
     private ContentLoadingProgressBar mLoadingBar;
@@ -129,7 +119,7 @@ public class PhotoGalleryFragment extends Fragment{
             @Override
             public boolean onQueryTextSubmit(String query) {
                 Log.d(TAG, "QueryTextSubmit: " + query);
-                QueryPreferances.setStoredQuery(getActivity(), query);
+                QueryPreferences.setStoredQuery(getActivity(), query);
                 updateItems();
                 searchView.onActionViewCollapsed();
                 mItems.clear();
@@ -145,7 +135,7 @@ public class PhotoGalleryFragment extends Fragment{
 
         searchView.setOnSearchClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                String query = QueryPreferances.getStoredQuery(getActivity());
+                String query = QueryPreferences.getStoredQuery(getActivity());
                 searchView.setQuery(query, false);
             }
         });
@@ -165,7 +155,7 @@ public class PhotoGalleryFragment extends Fragment{
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_item_clear:
-                QueryPreferances.setStoredQuery(getActivity(), null);
+                QueryPreferences.setStoredQuery(getActivity(), null);
                 updateItems();
                 return true;
             case R.id.menu_item_toggle_polling:
@@ -181,7 +171,7 @@ public class PhotoGalleryFragment extends Fragment{
     }
 
     private void updateItems() {
-        String query = QueryPreferances.getStoredQuery(getActivity());
+        String query = QueryPreferences.getStoredQuery(getActivity());
         new FetchItemsTask(query).execute();
     }
 
