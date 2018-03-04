@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
+import android.util.LruCache;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +27,7 @@ public class ThumbnailDownloader<T> extends HandlerThread {
     private Handler mResponseHandler;
     private ThumbnailDownloadListener<T> mThumbnailDownloadListener;
     private ConcurrentMap<T, String> mRequestMap  = new ConcurrentHashMap<>();
+    private LruCache<String, Bitmap> mMemoryCache;
 
     public interface ThumbnailDownloadListener<T> {
         void onThumbnailDownloaded(T target, Bitmap Thumbnail);
@@ -38,6 +40,7 @@ public class ThumbnailDownloader<T> extends HandlerThread {
     public ThumbnailDownloader(Handler responseHandler) {
         super(TAG);
         mResponseHandler = responseHandler;
+        createCache();
     }
 
     @Override
@@ -86,10 +89,19 @@ public class ThumbnailDownloader<T> extends HandlerThread {
                 return;
             }
 
-            byte[] bitmapBytes =  new FlickrFetcher().getURLBytes(url);
-            final Bitmap bitmap = BitmapFactory
-                    .decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
+            Bitmap bitmap;
+            bitmap = getBitmapFromMemCache(url);
+
+            if (bitmap == null) {
+                byte[] bitmapBytes = new FlickrFetcher().getURLBytes(url);
+                bitmap = BitmapFactory
+                        .decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
+
+                addBitmapToMemoryCache(url, bitmap);
+            }
+
             Log.i(TAG, "Bitmap created");
+            final Bitmap finalBitmap = bitmap;
 
             mResponseHandler.post(new Runnable() {
                 @Override
@@ -99,12 +111,36 @@ public class ThumbnailDownloader<T> extends HandlerThread {
                     }
 
                     mRequestMap.remove(target);
-                    mThumbnailDownloadListener.onThumbnailDownloaded(target, bitmap);
+                    mThumbnailDownloadListener.onThumbnailDownloaded(target, finalBitmap);
                 }
             });
         }
         catch (IOException ioe) {
             Log.e(TAG, "Error downloading image", ioe);
         }
+    }
+
+    private void createCache() {
+
+        final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
+
+        final int cacheSize = maxMemory / 8;
+
+        mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
+            @Override
+            protected int sizeOf(String key, Bitmap bitmap) {
+                return bitmap.getByteCount() / 1024;
+            }
+        };
+    }
+
+    private void addBitmapToMemoryCache(String key, Bitmap bitmap) {
+        if (getBitmapFromMemCache(key) == null) {
+            mMemoryCache.put(key, bitmap);
+        }
+    }
+
+    private Bitmap getBitmapFromMemCache(String key) {
+        return mMemoryCache.get(key);
     }
 }

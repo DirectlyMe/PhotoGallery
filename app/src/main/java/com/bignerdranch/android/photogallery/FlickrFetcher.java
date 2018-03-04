@@ -30,6 +30,8 @@ public class FlickrFetcher {
 
     private static final String TAG = "FlickrFetcher";
 
+    private int currentPage;
+
     private static final String API_KEY = "ec1014de589f799bbfa048579478bda4";
     private static final String FETCH_RECENTS_METHOD = "flickr.photos.getRecent";
     private static final String SEARCH_METHOD = "flickr.photos.search";
@@ -42,6 +44,14 @@ public class FlickrFetcher {
                     .appendQueryParameter("nojsoncallback", "1")
                     .appendQueryParameter("extras", "url_s")
             .build();
+
+    public FlickrFetcher() {
+
+    }
+
+    public FlickrFetcher(int currentPage) {
+        this.currentPage = currentPage;
+    }
 
     public String getURLString(String urlSpec) throws IOException {
         return new String(getURLBytes(urlSpec));
@@ -81,7 +91,8 @@ public class FlickrFetcher {
 
     private String buildUrl(String method, String query) {
         Uri.Builder uriBuilder = ENDPOINT.buildUpon()
-                .appendQueryParameter("method", method);
+                .appendQueryParameter("method", method)
+                .appendQueryParameter("page", String.valueOf(currentPage));
 
         if (method.equals(SEARCH_METHOD)) {
             uriBuilder.appendQueryParameter("text", query);
